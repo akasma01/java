@@ -1,0 +1,172 @@
+Here’s the complete solution to generate the pivot table as shown in your image using Pandas. The output includes:
+
+1. Approved and Declined transaction counts per country
+
+
+2. Total transactions per country
+
+
+3. Decline Ratio per country
+
+
+4. Grand Total of transactions
+
+
+5. Grand Total Decline Ratio
+
+
+
+
+---
+
+Step-by-Step Queries
+
+1. Load the Data
+
+import pandas as pd
+
+# Load the dataset (modify the file path if necessary)
+file_path = "/mnt/data/file-QCdvuyACi7DcpuVi4hic3J"
+df = pd.read_csv(file_path)  # Use read_excel(file_path) for Excel files
+
+# Select relevant columns
+df = df[['Year', 'Month', 'Country', 'Response', 'Transaction ID']]
+
+
+---
+
+2. Count Transactions by Country & Response Type
+
+# Pivot table to count transactions based on Response (Approved, Declined)
+pivot_df = df.pivot_table(
+    index=['Country', 'Response'],  # Rows: Country and Response Type
+    columns=['Year', 'Month'],  # Columns: Year and Month
+    values='Transaction ID',  # Aggregating Transaction ID
+    aggfunc='count',  # Count number of transactions
+    fill_value=0  # Replace NaN with 0
+).reset_index()
+
+
+---
+
+3. Calculate "Total" for Each Country
+
+# Compute total transactions per country
+total_df = df.groupby(['Country', 'Year', 'Month'])['Transaction ID'].count().reset_index()
+total_df['Response'] = 'Total'  # Label it as "Total"
+
+# Pivot total transactions
+total_pivot = total_df.pivot_table(
+    index=['Country', 'Response'],
+    columns=['Year', 'Month'],
+    values='Transaction ID',
+    aggfunc='sum',
+    fill_value=0
+).reset_index()
+
+
+---
+
+4. Calculate "Decline Ratio" for Each Country
+
+# Calculate declined transactions
+declined_df = df[df['Response'] == 'Declined'].groupby(['Country', 'Year', 'Month'])['Transaction ID'].count().reset_index()
+
+# Merge with total transactions to compute decline ratio
+decline_ratio_df = pd.merge(declined_df, total_df, on=['Country', 'Year', 'Month'], suffixes=('_declined', '_total'))
+decline_ratio_df['Decline Ratio'] = (decline_ratio_df['Transaction ID_declined'] / decline_ratio_df['Transaction ID_total']) * 100
+
+# Keep only required columns
+decline_ratio_df = decline_ratio_df[['Country', 'Year', 'Month', 'Decline Ratio']]
+decline_ratio_df['Response'] = 'Decline Ratio'
+
+# Pivot decline ratio
+decline_ratio_pivot = decline_ratio_df.pivot_table(
+    index=['Country', 'Response'],
+    columns=['Year', 'Month'],
+    values='Decline Ratio',
+    aggfunc='mean',
+    fill_value=0
+).reset_index()
+
+
+---
+
+5. Calculate "Grand Total" for All Countries
+
+# Compute grand total transactions
+grand_total_df = df.groupby(['Year', 'Month'])['Transaction ID'].count().reset_index()
+grand_total_df['Country'] = 'Grand Total'
+grand_total_df['Response'] = 'Grand Total'
+
+# Pivot grand total
+grand_total_pivot = grand_total_df.pivot_table(
+    index=['Country', 'Response'],
+    columns=['Year', 'Month'],
+    values='Transaction ID',
+    aggfunc='sum',
+    fill_value=0
+).reset_index()
+
+
+---
+
+6. Calculate "Grand Total Decline Ratio"
+
+# Compute total declined transactions for all countries
+grand_declined_df = df[df['Response'] == 'Declined'].groupby(['Year', 'Month'])['Transaction ID'].count().reset_index()
+
+# Merge with grand total
+grand_decline_ratio_df = pd.merge(grand_declined_df, grand_total_df, on=['Year', 'Month'], suffixes=('_declined', '_total'))
+grand_decline_ratio_df['Decline Ratio'] = (grand_decline_ratio_df['Transaction ID_declined'] / grand_decline_ratio_df['Transaction ID_total']) * 100
+
+# Keep required columns
+grand_decline_ratio_df['Country'] = 'Grand Total'
+grand_decline_ratio_df['Response'] = 'Decline Ratio'
+
+# Pivot grand decline ratio
+grand_decline_ratio_pivot = grand_decline_ratio_df.pivot_table(
+    index=['Country', 'Response'],
+    columns=['Year', 'Month'],
+    values='Decline Ratio',
+    aggfunc='mean',
+    fill_value=0
+).reset_index()
+
+
+---
+
+7. Combine All DataFrames
+
+# Concatenate all pivot tables
+final_pivot = pd.concat([pivot_df, total_pivot, decline_ratio_pivot, grand_total_pivot, grand_decline_ratio_pivot])
+
+# Sort for better readability
+final_pivot = final_pivot.sort_values(by=['Country', 'Response'])
+
+# Reset index
+final_pivot = final_pivot.reset_index(drop=True)
+
+# Display final output
+print(final_pivot)
+
+
+---
+
+Final Output Structure
+
+The resulting pivot table will have the following structure:
+
+
+---
+
+Key Features
+
+✅ Handles multi-level pivoting (Year, Month as columns)
+✅ Computes total transactions per country
+✅ Calculates decline ratio per country
+✅ Adds grand total for all transactions
+✅ Computes overall decline ratio
+
+This script will generate the pivot table you need. Let me know if you need any modifications!
+
